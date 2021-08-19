@@ -1,0 +1,49 @@
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: country
+  namespace: prodapp
+spec:
+  awsName: country.prodapp.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: country-router
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: rock
+  namespace: prodapp
+spec:
+  awsName: rock.prodapp.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: rock-router
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: country
+  namespace: prodapp
+  labels:
+    app: country
+spec:
+  ports:
+  - port: 9080
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rock
+  namespace: prodapp
+  labels:
+    app: rock
+spec:
+  ports:
+  - port: 9080
+    name: http
+---

@@ -1,0 +1,189 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prodapp
+  labels:
+    mesh: dj-app
+    appmesh.k8s.aws/sidecarInjectorWebhook: enabled
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: Mesh
+metadata:
+  name: dj-app
+spec:
+  namespaceSelector:
+    matchLabels:
+      mesh: dj-app
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: dj
+  namespace: prodapp
+spec:
+  podSelector:
+    matchLabels:
+      app: dj
+  listeners:
+    - portMapping:
+        port: 9080
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/ping'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  backends:
+    - virtualService:
+        virtualServiceRef:
+          name: country
+    - virtualService:
+        virtualServiceRef:
+          name: rock
+  serviceDiscovery:
+    dns:
+      hostname: dj.prodapp.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: country
+  namespace: prodapp
+spec:
+  awsName: country.prodapp.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: country-router
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: rock
+  namespace: prodapp
+spec:
+  awsName: rock.prodapp.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: rock-router
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  name: country-router
+  namespace: prodapp
+spec:
+  listeners:
+    - portMapping:
+        port: 9080
+        protocol: http
+  routes:
+    - name: country-route
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: country-v1
+              weight: 100
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  name: rock-router
+  namespace: prodapp
+spec:
+  listeners:
+    - portMapping:
+        port: 9080
+        protocol: http
+  routes:
+    - name: rock-route
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: rock-v1
+              weight: 100
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: country-v1
+  namespace: prodapp
+spec:
+  podSelector:
+    matchLabels:
+      app: country
+      version: v1
+  listeners:
+    - portMapping:
+        port: 9080
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/ping'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: country-v1.prodapp.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: rock-v1
+  namespace: prodapp
+spec:
+  podSelector:
+    matchLabels:
+      app: rock
+      version: v1
+  listeners:
+    - portMapping:
+        port: 9080
+        protocol: http
+      healthCheck:
+        protocol: http
+        path: '/ping'
+        healthyThreshold: 2
+        unhealthyThreshold: 2
+        timeoutMillis: 2000
+        intervalMillis: 5000
+  serviceDiscovery:
+    dns:
+      hostname: rock-v1.prodapp.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: country
+  namespace: prodapp
+  labels:
+    app: country
+spec:
+  ports:
+  - port: 9080
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rock
+  namespace: prodapp
+  labels:
+    app: rock
+spec:
+  ports:
+  - port: 9080
+    name: http
+---

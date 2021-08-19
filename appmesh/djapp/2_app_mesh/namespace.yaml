@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prodapp
+  labels:
+    mesh: dj-app
+    appmesh.k8s.aws/sidecarInjectorWebhook: enabled
